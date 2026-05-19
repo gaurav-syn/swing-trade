@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import yahooFinance from 'yahoo-finance2';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const yahooFinance = require('yahoo-finance2').default ?? require('yahoo-finance2');
 
 @Injectable()
 export class MarketDataService {

@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import yahooFinance from 'yahoo-finance2';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const yahooFinance = require('yahoo-finance2').default ?? require('yahoo-finance2');
 import { PrismaService } from '../../database/prisma.service';
 import { IndicatorsEngine, OHLCV } from './engines/indicators.engine';
 import { ScoringEngine } from './engines/scoring.engine';
