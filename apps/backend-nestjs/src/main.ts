@@ -22,11 +22,23 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
-  // CORS
+  // CORS — allow SWA domain + local dev + any configured FRONTEND_URL
+  const frontendUrl = configService.get<string>('FRONTEND_URL', '');
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://black-grass-0f6ebb100.7.azurestaticapps.net',
+    ...(frontendUrl ? [frontendUrl] : []),
+  ];
   app.enableCors({
-    origin: configService.get('FRONTEND_URL', 'http://localhost:3000'),
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Global prefix + versioning
