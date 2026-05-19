@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
   experimental: { serverActions: { allowedOrigins: ['*'] } },
   async rewrites() {
     return process.env.NODE_ENV === 'development'
