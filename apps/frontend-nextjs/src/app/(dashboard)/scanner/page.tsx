@@ -4,20 +4,20 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Zap, TrendingUp, Shield, Target, Clock,
-  BarChart2, ChevronRight, AlertCircle, CheckCircle2,
+  AlertCircle, CheckCircle2, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { TakeTrade } from '@/components/scanner/TakeTrade';
-import { formatCurrency, formatPercent, getSignalColor, getScoreColor, cn } from '@/lib/utils';
+import { formatCurrency, getSignalColor, getScoreColor, cn } from '@/lib/utils';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 
 export default function ScannerPage() {
   const qc = useQueryClient();
   const [selectedResult, setSelectedResult] = useState<any>(null);
-  const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const [activeRunId, setActiveRunId]        = useState<string | null>(null);
 
   const { data: latestResults, isLoading: loadingResults } = useQuery({
     queryKey: ['scanner-latest'],
@@ -49,88 +49,105 @@ export default function ScannerPage() {
   });
 
   const isRunning = runData?.status === 'RUNNING' || scanning;
-  const results = latestResults?.results ?? [];
+  const results   = latestResults?.results ?? [];
+
+  const progress = isRunning && runData
+    ? Math.round((runData.totalScanned / 80) * 100)
+    : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-foreground">Stock Scanner</h1>
-          <p className="text-sm text-muted-foreground">
-            Multi-indicator NSE scanner · RSI · MACD · EMA · SuperTrend · Volume
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Multi-indicator NSE scanner · RSI · MACD · EMA20/50/200 · SuperTrend · Volume
           </p>
         </div>
-        <Button onClick={() => startScan()} isLoading={isRunning} size="lg">
+        <Button
+          onClick={() => startScan()}
+          isLoading={isRunning}
+          size="lg"
+          className="shrink-0"
+        >
           <Zap className="w-4 h-4" />
-          {isRunning ? 'Scanning Market...' : 'Run Scanner'}
+          {isRunning ? 'Scanning...' : 'Run Scanner'}
         </Button>
       </div>
 
       {/* Scan progress */}
       {isRunning && (
         <Card className="border-primary/30 bg-primary/5">
-          <div className="flex items-center gap-3">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Scanning NSE stocks...</p>
-              <p className="text-xs text-muted-foreground">
-                Analyzing RSI, MACD, EMA20/50/200, SuperTrend, Bollinger Bands, Volume
+          <div className="flex items-center gap-4">
+            <div className="w-9 h-9 bg-primary/15 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">Scanning NSE stocks...</p>
+              <div className="mt-2 w-full bg-secondary rounded-full h-1.5">
+                <div
+                  className="bg-primary h-1.5 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {runData?.totalScanned ?? 0}/80 scanned ·{' '}
+                <span className="text-profit">{runData?.opportunitiesFound ?? 0} opportunities found</span>
               </p>
             </div>
-            {runData && (
-              <div className="ml-auto text-right">
-                <p className="text-xs text-muted-foreground">Scanned: {runData.totalScanned}</p>
-                <p className="text-xs text-profit">Found: {runData.opportunitiesFound}</p>
-              </div>
-            )}
           </div>
         </Card>
       )}
 
       {/* Last scan info */}
       {latestResults && !isRunning && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <CheckCircle2 className="w-3.5 h-3.5 text-profit" />
-          Last scan: {latestResults.totalScanned} stocks scanned ·{' '}
-          <span className="text-profit">{latestResults.opportunitiesFound} opportunities found</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CheckCircle2 className="w-3.5 h-3.5 text-profit" />
+            <span>{latestResults.totalScanned} stocks scanned</span>
+          </div>
+          <div className="w-px h-3 bg-border" />
+          <span className="text-xs text-profit font-medium">{latestResults.opportunitiesFound} opportunities found</span>
         </div>
       )}
 
       {/* Disclaimer */}
-      <div className="flex items-start gap-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
+      <div className="flex items-start gap-2.5 p-3.5 bg-yellow-500/5 border border-yellow-500/15 rounded-xl">
         <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
-        <p className="text-xs text-yellow-400/90">
+        <p className="text-xs text-yellow-400/80 leading-relaxed">
           Scanner results are based on technical analysis and probability scoring.
-          These are NOT buy/sell recommendations. Always do your own research.
-          Past performance does not guarantee future results. Realistic win rate: 55–65%.
+          These are <strong>NOT</strong> buy/sell recommendations. Always do your own research.
+          Realistic win rate: 55–65%. Past performance does not guarantee future results.
         </p>
       </div>
 
-      {/* Results grid */}
+      {/* Results */}
       {loadingResults ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {[...Array(6)].map((_, i) => <div key={i} className="h-48 bg-card border border-border rounded-xl shimmer" />)}
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-56 bg-card border border-border rounded-xl shimmer" />
+          ))}
         </div>
       ) : results.length === 0 ? (
         <Card className="text-center py-16">
-          <Search className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm font-medium text-foreground">No scan results yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Click "Run Scanner" to find opportunities</p>
+          <div className="w-14 h-14 bg-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Search className="w-7 h-7 text-muted-foreground" />
+          </div>
+          <p className="font-semibold text-foreground">No scan results yet</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">Click "Run Scanner" to find trading opportunities</p>
+          <Button onClick={() => startScan()} isLoading={isRunning} size="sm">
+            <Zap className="w-3.5 h-3.5" /> Start Scan
+          </Button>
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {results.map((result: any) => (
-            <ScannerResultCard
-              key={result.id}
-              result={result}
-              onTakeTrade={() => setSelectedResult(result)}
-            />
+            <ScannerResultCard key={result.id} result={result} onTakeTrade={() => setSelectedResult(result)} />
           ))}
         </div>
       )}
 
-      {/* Take Trade Modal */}
       {selectedResult && (
         <TakeTrade
           result={selectedResult}
@@ -138,7 +155,6 @@ export default function ScannerPage() {
           onSuccess={() => {
             setSelectedResult(null);
             qc.invalidateQueries({ queryKey: ['active-trades'] });
-            toast.success(`Trade opened: ${selectedResult.symbol}`);
           }}
         />
       )}
@@ -147,93 +163,116 @@ export default function ScannerPage() {
 }
 
 function ScannerResultCard({ result, onTakeTrade }: { result: any; onTakeTrade: () => void }) {
-  const rr = Number(result.riskRewardRatio);
-  const score = Number(result.confidenceScore);
+  const score  = Number(result.confidenceScore);
   const change = Number(result.dayChangePercent ?? 0);
 
+  const scoreColor =
+    score >= 75 ? 'text-emerald-400' :
+    score >= 60 ? 'text-blue-400' :
+    score >= 45 ? 'text-yellow-400' : 'text-red-400';
+
+  const scoreBg =
+    score >= 75 ? 'bg-emerald-500/10 border-emerald-500/20' :
+    score >= 60 ? 'bg-blue-500/10 border-blue-500/20' :
+    score >= 45 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-red-500/10 border-red-500/20';
+
+  const signalClass: Record<string, string> = {
+    VERY_STRONG: 'signal-very-strong',
+    STRONG:      'signal-strong',
+    MODERATE:    'signal-moderate',
+    WEAK:        'signal-weak',
+  };
+
   return (
-    <Card className="hover:border-primary/40 transition-colors group">
-      <div className="flex items-start justify-between mb-3">
+    <Card className="card-hover-glow transition-all">
+      {/* Top row */}
+      <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+          <div className="w-11 h-11 bg-gradient-to-br from-primary/25 to-primary/5 border border-primary/20 rounded-xl flex items-center justify-center">
             <span className="text-sm font-bold text-primary">{result.symbol.slice(0, 2)}</span>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="font-bold text-foreground">{result.symbol}</p>
-              <Badge className={getSignalColor(result.signalStrength)}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-foreground text-[15px]">{result.symbol}</span>
+              <span className={cn(
+                'text-[11px] font-semibold px-2 py-0.5 rounded-md',
+                signalClass[result.signalStrength] ?? 'bg-secondary text-muted-foreground',
+              )}>
                 {result.signalStrength?.replace('_', ' ')}
-              </Badge>
+              </span>
+              <span className={cn(
+                'text-[11px] font-medium',
+                change >= 0 ? 'text-profit' : 'text-loss',
+              )}>
+                {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">{result.companyName} · {result.sector}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">
+              {result.companyName} · {result.sector}
+            </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className={cn('text-2xl font-bold font-mono', getScoreColor(score))}>{score}</p>
-          <p className="text-[10px] text-muted-foreground">Score /100</p>
+
+        {/* Score */}
+        <div className={cn('text-center px-3 py-2 rounded-xl border', scoreBg)}>
+          <p className={cn('text-2xl font-bold font-mono leading-none', scoreColor)}>{score}</p>
+          <p className="text-[9px] text-muted-foreground mt-0.5 uppercase tracking-wide">Score</p>
         </div>
       </div>
 
-      {/* Price row */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
-        <div className="bg-secondary/50 rounded-lg p-2">
-          <p className="text-[10px] text-muted-foreground">Entry</p>
-          <p className="text-xs font-mono font-semibold text-foreground">{formatCurrency(Number(result.suggestedEntry))}</p>
-        </div>
-        <div className="bg-loss/5 rounded-lg p-2">
-          <p className="text-[10px] text-muted-foreground">Stop Loss</p>
-          <p className="text-xs font-mono font-semibold text-loss">{formatCurrency(Number(result.stopLoss))}</p>
-        </div>
-        <div className="bg-profit/5 rounded-lg p-2">
-          <p className="text-[10px] text-muted-foreground">Target</p>
-          <p className="text-xs font-mono font-semibold text-profit">{formatCurrency(Number(result.target1))}</p>
-        </div>
-        <div className="bg-blue-500/5 rounded-lg p-2">
-          <p className="text-[10px] text-muted-foreground">R:R</p>
-          <p className="text-xs font-mono font-semibold text-blue-400">{rr.toFixed(2)}x</p>
-        </div>
+      {/* Price grid */}
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        {[
+          { label: 'Entry',     val: formatCurrency(Number(result.suggestedEntry)), cls: 'text-foreground', bg: 'bg-secondary/60' },
+          { label: 'Stop Loss', val: formatCurrency(Number(result.stopLoss)),       cls: 'text-loss',       bg: 'bg-loss/8' },
+          { label: 'Target',    val: formatCurrency(Number(result.target1)),        cls: 'text-profit',     bg: 'bg-profit/8' },
+          { label: 'R:R',       val: `${Number(result.riskRewardRatio).toFixed(1)}x`, cls: 'text-blue-400', bg: 'bg-blue-500/8' },
+        ].map(({ label, val, cls, bg }) => (
+          <div key={label} className={cn('rounded-lg p-2 text-center', bg)}>
+            <p className="text-[9px] text-muted-foreground uppercase tracking-wide">{label}</p>
+            <p className={cn('text-xs font-mono font-bold mt-0.5', cls)}>{val}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Indicator row */}
-      <div className="flex items-center gap-3 mb-3 text-xs text-muted-foreground flex-wrap">
+      {/* Indicator tags */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-3">
         {result.rsi && (
-          <span className={cn('px-1.5 py-0.5 rounded', Number(result.rsi) > 50 ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss')}>
+          <span className={cn('px-2 py-0.5 rounded text-[11px] font-medium',
+            Number(result.rsi) > 50 ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss',
+          )}>
             RSI {Number(result.rsi).toFixed(0)}
           </span>
         )}
         {result.superTrendDir && (
-          <span className={cn('px-1.5 py-0.5 rounded', result.superTrendDir === 'UP' ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss')}>
+          <span className={cn('px-2 py-0.5 rounded text-[11px] font-medium',
+            result.superTrendDir === 'UP' ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss',
+          )}>
             ST {result.superTrendDir}
           </span>
         )}
-        {result.patterns?.length > 0 && (
-          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
-            {result.patterns[0]?.replace(/_/g, ' ')}
+        {result.patterns?.slice(0, 2).map((p: string) => (
+          <span key={p} className="px-2 py-0.5 rounded text-[11px] bg-purple-500/10 text-purple-400">
+            {p.replace(/_/g, ' ')}
           </span>
-        )}
-        <span className="ml-auto flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          {result.suggestedHoldDays}d hold
+        ))}
+        <span className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Clock className="w-3 h-3" />{result.suggestedHoldDays}d hold
         </span>
       </div>
 
-      {/* Strategy */}
-      {result.strategy && (
-        <p className="text-xs text-muted-foreground mb-3 italic">{result.strategy}</p>
-      )}
-
-      {/* Score breakdown */}
-      <div className="grid grid-cols-4 gap-1 mb-3">
+      {/* Score sub-bars */}
+      <div className="grid grid-cols-4 gap-2 mb-4">
         {[
-          { label: 'Trend', value: result.trendScore, max: 30 },
+          { label: 'Trend',    value: result.trendScore,    max: 30 },
           { label: 'Momentum', value: result.momentumScore, max: 30 },
-          { label: 'Volume', value: result.volumeScore, max: 20 },
-          { label: 'Pattern', value: result.patternScore, max: 20 },
+          { label: 'Volume',   value: result.volumeScore,   max: 20 },
+          { label: 'Pattern',  value: result.patternScore,  max: 20 },
         ].map(({ label, value, max }) => (
           <div key={label}>
-            <div className="flex justify-between text-[10px] mb-0.5">
+            <div className="flex justify-between text-[10px] mb-1">
               <span className="text-muted-foreground">{label}</span>
-              <span className="text-foreground">{Number(value ?? 0)}/{max}</span>
+              <span className="text-foreground tabular-nums">{Number(value ?? 0)}</span>
             </div>
             <div className="w-full bg-secondary rounded-full h-1">
               <div
@@ -245,9 +284,14 @@ function ScannerResultCard({ result, onTakeTrade }: { result: any; onTakeTrade: 
         ))}
       </div>
 
+      {result.strategy && (
+        <p className="text-[11px] text-muted-foreground/70 italic mb-3 truncate">{result.strategy}</p>
+      )}
+
       <Button onClick={onTakeTrade} variant="primary" size="sm" className="w-full">
         <TrendingUp className="w-3.5 h-3.5" />
-        Take Trade
+        Take This Trade
+        <ChevronRight className="w-3.5 h-3.5 ml-auto" />
       </Button>
     </Card>
   );
