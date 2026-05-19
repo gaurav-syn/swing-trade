@@ -1,0 +1,33 @@
+{
+  "name": "swing-trader-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-grade Indian Stock Market Swing Trading Platform",
+  "workspaces": [
+    "apps/frontend-nextjs",
+    "apps/backend-nestjs"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev --workspace=apps/backend-nestjs",
+    "dev:frontend": "npm run dev --workspace=apps/frontend-nextjs",
+    "build": "npm run build --workspaces",
+    "build:backend": "npm run build --workspace=apps/backend-nestjs",
+    "build:frontend": "npm run build --workspace=apps/frontend-nextjs",
+    "db:migrate": "npm run prisma:migrate --workspace=apps/backend-nestjs",
+    "db:studio": "npm run prisma:studio --workspace=apps/backend-nestjs",
+    "db:seed": "npm run prisma:seed --workspace=apps/backend-nestjs",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
