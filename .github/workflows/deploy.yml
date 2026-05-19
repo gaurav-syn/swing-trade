@@ -37,15 +37,16 @@ jobs:
         run: npm run build
         working-directory: apps/backend-nestjs
 
+      - name: Install production deps only
+        run: npm install --only=production --legacy-peer-deps
+        working-directory: apps/backend-nestjs
+
+      # Upload the entire backend folder (dist + node_modules + prisma) as one artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: backend-dist
-          path: |
-            apps/backend-nestjs/dist
-            apps/backend-nestjs/prisma
-            apps/backend-nestjs/package.json
-            apps/backend-nestjs/package-lock.json
+          path: apps/backend-nestjs
           retention-days: 1
 
   # ─────────────────────────────────────────────
@@ -58,22 +59,11 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - uses: actions/checkout@v4
-
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: backend-dist
-          path: apps/backend-nestjs
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install production deps
-        run: npm install --only=production --legacy-peer-deps
-        working-directory: apps/backend-nestjs
+          path: backend-deploy
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -84,7 +74,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ secrets.AZURE_BACKEND_APP_NAME }}
-          package: apps/backend-nestjs
+          package: backend-deploy
 
-  # Frontend is deployed via azure-static-web-apps-black-grass-0f6ebb100.yml
-
+  # Frontend is deployed via SWA CLI locally (see README)
